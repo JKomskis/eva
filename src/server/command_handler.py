@@ -25,6 +25,7 @@ from src.models.server.response import ResponseStatus, Response
 from src.models.storage.batch import Batch
 
 from src.utils.logging_manager import LoggingManager, LoggingLevel
+from src.utils.trace_collector import TraceCollector
 
 
 def execute_query(query) -> Iterator[Batch]:
@@ -58,7 +59,9 @@ def handle_request(transport, request_message):
     LoggingManager().log('Receive request: --|' + str(request_message) + '|--')
 
     try:
+        TraceCollector().start_new_trace()
         output_batch = execute_query_fetch_all(request_message)
+        TraceCollector().close_trace()
     except Exception as e:
         LoggingManager().log(e, LoggingLevel.WARNING)
         output_batch = Batch(pd.DataFrame([{'error': str(e)}]))

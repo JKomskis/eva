@@ -18,6 +18,8 @@ from typing import Iterator, Dict
 import pandas as pd
 
 from src.models.storage.batch import Batch
+from src.utils.logging_manager import LoggingManager, LoggingLevel
+from src.utils.trace_collector import TraceCollector
 
 
 class AbstractReader(metaclass=ABCMeta):
@@ -41,6 +43,9 @@ class AbstractReader(metaclass=ABCMeta):
         self.file_url = file_url
         self.batch_mem_size = batch_mem_size
         self.offset = offset
+    
+    def _log_read(self, batch: Batch):
+        TraceCollector().log_fix(self.file_url, batch)
 
     def read(self) -> Iterator[Batch]:
         """
@@ -55,10 +60,14 @@ class AbstractReader(metaclass=ABCMeta):
                 row_size = data['data'].nbytes
             data_batch.append(data)
             if len(data_batch) * row_size >= self.batch_mem_size:
-                yield Batch(pd.DataFrame(data_batch))
+                batch = Batch(pd.DataFrame(data_batch))
+                self._log_read(batch)
+                yield batch
                 data_batch = []
         if data_batch:
-            yield Batch(pd.DataFrame(data_batch))
+            batch = Batch(pd.DataFrame(data_batch))
+            self._log_read(batch)
+            yield batch
 
     @abstractmethod
     def _read(self) -> Iterator[Dict]:

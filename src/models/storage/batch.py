@@ -20,6 +20,7 @@ from typing import Iterable
 
 from pandas import DataFrame
 from src.utils.logging_manager import LoggingManager, LoggingLevel
+import src.utils.trace_collector as trace_collector
 
 
 class BatchEncoder(json.JSONEncoder):
@@ -54,6 +55,9 @@ class Batch:
         # store the batch with columns sorted
         self.frames = frames
         self._identifier_column = identifier_column
+    
+    def __del__(self):
+        trace_collector.TraceCollector().log_free(self)
 
     @property
     def frames(self):
@@ -95,6 +99,31 @@ class Batch:
         obj = json.loads(json_str, object_hook=as_batch)
         return cls(frames=obj['frames'],
                    identifier_column=obj['identifier_column'])
+    
+    def id_intervals(self) -> str:
+        ids = self._frames[[self._identifier_column]].to_numpy().flatten()
+        intervals = []
+        curr_interval = (-1, -1)
+        next_id = -1
+        for i in range(0, ids.size):
+            if curr_interval[0] == -1:
+                curr_interval = (ids[i], curr_interval[1])
+                next_id = curr_interval[0] + 1
+            elif ids[i] != next_id:
+                curr_interval = (curr_interval[0], next_id - 1)
+                intervals.append(curr_interval)
+                curr_interval = (ids[i], -1)
+                next_id = ids[i] + 1
+            else:
+                next_id = next_id + 1
+        curr_interval = (curr_interval[0], next_id - 1)
+        intervals.append(curr_interval)
+
+        intervals_str = '['
+        for interval in intervals:
+            intervals_str = intervals_str + f"({interval[0]}->{interval[1]}) "
+        intervals_str = intervals_str + ']'
+        return intervals_str
 
     def __str__(self):
         """
@@ -107,8 +136,8 @@ class Batch:
                % (self._frames, self._batch_size, self.identifier_column)
 
     def __eq__(self, other: 'Batch'):
-        return self.frames[sorted(self.frames.columns)]\
-            .equals(other.frames[sorted(other.frames.columns)])
+        return self._frames[sorted(self._frames.columns)]\
+            .equals(other._frames[sorted(other._frames.columns)])
 
     def __getitem__(self, indices) -> 'Batch':
         """

@@ -14,8 +14,11 @@
 # limitations under the License.
 from abc import ABC, abstractmethod
 from typing import List
+from src.models.storage.batch import Batch
 
 from src.planner.abstract_plan import AbstractPlan
+from src.utils.logging_manager import LoggingManager, LoggingLevel
+from src.utils.trace_collector import TraceCollector
 
 
 class AbstractExecutor(ABC):
@@ -28,6 +31,8 @@ class AbstractExecutor(ABC):
     def __init__(self, node: AbstractPlan):
         self._node = node
         self._children = []
+        self._current_batch = None
+        self._current_file_url = None
 
     def append_child(self, child: 'AbstractExecutor'):
         """
@@ -64,3 +69,9 @@ class AbstractExecutor(ABC):
         child nodes and emits it to parent node.
         """
         NotImplementedError('Must be implemented in subclasses.')
+    
+    def _notify_process_batch(self, file_url: str, new_batch: Batch):
+        # if not isinstance(self._current_batch, type(None)):
+        #     TraceCollector().log_unfix(self._current_file_url, self._current_batch)
+        self._current_batch = new_batch
+        self._current_file_url = file_url

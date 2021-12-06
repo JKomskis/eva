@@ -35,10 +35,12 @@ class DiskStorageExecutor(AbstractStorageExecutor):
         self.storage = OpenCVReader(node.video,
                                     batch_mem_size=node.batch_mem_size,
                                     offset=node.offset)
+        self.file_url = node.video.file_url
 
     def validate(self):
         pass
 
     def exec(self) -> Iterator[Batch]:
         for batch in self.storage.read():
+            self._notify_process_batch(self.file_url, batch)
             yield batch

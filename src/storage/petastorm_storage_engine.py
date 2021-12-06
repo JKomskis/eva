@@ -112,6 +112,8 @@ class PetastormStorageEngine(AbstractStorageEngine):
             Iterator of Batch read.
         """
         predicate = None
+        # columns = ['id']
+        # predicate_func = lambda id: id >= 1701*10
         if predicate_func and columns:
             predicate = in_lambda(columns, predicate_func)
 

@@ -28,4 +28,6 @@ class StorageExecutor(AbstractExecutor):
         pass
 
     def exec(self) -> Iterator[Batch]:
-        return StorageEngine.read(self.node.video, self.node.batch_mem_size)
+        for batch in StorageEngine.read(self.node.video, self.node.batch_mem_size):
+            self._notify_process_batch(self.node.video.file_url, batch)
+            yield batch
